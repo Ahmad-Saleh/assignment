@@ -80,6 +80,32 @@ public class CsvTransactionProcessorTest {
         assertThat(violations, containsInAnyOrder(new Violation(2,"type"),new Violation(2,"amount"),new Violation(1,"amount")));
     }
 
+    @Test
+    public void givenValidCsvStream_WhenCallingGetImportedTransctionTwice_ThenReturnTheExpectedTransactions() {
+        InputStream is = asStream("C,1000,salary\nD,200,rent\nD,800,other");
+        csvTransactionProcessor.importTransactions(is);
+
+        csvTransactionProcessor.getImportedTransactions();
+        List<Transaction> transactions = csvTransactionProcessor.getImportedTransactions();
+
+        assertThat(transactions, containsInAnyOrder(
+                newTransaction("D", new BigDecimal(200), "rent"),
+                newTransaction("C", new BigDecimal(1000), "salary"),
+                newTransaction("D", new BigDecimal(800), "other")
+        ));
+    }
+
+    @Test
+    public void givenCsvStreamWithMultipleInvalidTransactions_WhenCallingValidateTwice_ThenReportTheProperViolations() throws Exception {
+        InputStream is = asStream("C,one thousand,salary\nX,400,rent\nD,750,other");
+        csvTransactionProcessor.importTransactions(is);
+
+        csvTransactionProcessor.validate();
+        List<Violation> violations =  csvTransactionProcessor.validate();
+
+        assertThat(violations, containsInAnyOrder(new Violation(2,"type"),new Violation(1,"amount")));
+    }
+
     private Transaction newTransaction(String type, BigDecimal amount, String narration) {
         return new Transaction(type, amount, narration);
     }
